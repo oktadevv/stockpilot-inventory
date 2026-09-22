@@ -1,0 +1,15 @@
+# deps & build
+node_modules/
+dist/
+
+# env (NEVER commit real credentials)
+.env
+.env*.local
+
+# vercel
+.vercel/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.log

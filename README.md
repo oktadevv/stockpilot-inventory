@@ -16,7 +16,7 @@ OTP step is simulated — any 6-digit code works.
 ## Demo notes (honest limitations)
 
 - Auth is client-side demo mode: any valid-looking email + 6-char password signs in, no real session.
-- Currency is IDR (Rp), store timezone Asia/Jakarta, POS tax 11% (PPN).
+- Currency is USD ($), store timezone America/Los_Angeles, POS tax 10%.
 - Export buttons download real CSV files; the Reports PDF button opens the browser print dialog.
 - Daily Sales Ledger + charts use static demo figures; inventory/supplier data is live from Neon.
 

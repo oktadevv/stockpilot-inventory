@@ -19,7 +19,7 @@ import { api } from "./api.js";
 
 /* ---------- helpers ---------- */
 const cx = (...c) => c.filter(Boolean).join(" ");
-const money = (n) => "Rp" + Number(n).toLocaleString("id-ID", { maximumFractionDigits: 0 });
+const money = (n) => "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const PIE_COLORS = ["#4F46E5", "#10B981", "#F59E0B", "#0EA5E9", "#94A3B8"];
 
 function downloadCSV(filename, headers, rows) {
@@ -343,7 +343,7 @@ function Topbar({ onMenu, dark, toggleDark, role, email, onLogout, query, setQue
   const [notifs, setNotifs] = useState([
     { id: 1, icon: AlertTriangle, tint: "bg-amber-500/15 text-amber-500", title: "Low stock warning", desc: "Dark Chocolate Bar tinggal 9 pcs — segera restock.", time: "2 mnt lalu", unread: true },
     { id: 2, icon: Truck, tint: "bg-emerald-500/15 text-emerald-500", title: "Pesanan diterima", desc: "PO-2081 dari GreenFarm Dairy sudah tiba di gudang.", time: "1 jam lalu", unread: true },
-    { id: 3, icon: BarChart3, tint: "bg-primary-600/10 text-primary-600 dark:text-primary-300", title: "Laporan harian siap", desc: "Penjualan hari ini Rp4.180.000 dari 312 order.", time: "3 jam lalu", unread: true },
+    { id: 3, icon: BarChart3, tint: "bg-primary-600/10 text-primary-600 dark:text-primary-300", title: "Laporan harian siap", desc: "Penjualan hari ini $4,180 dari 312 order.", time: "3 jam lalu", unread: true },
   ]);
   const unread = notifs.filter((n) => n.unread).length;
   const titles = { dashboard: "Dashboard", inventory: "Inventory", pos: "POS & Stock Control", suppliers: "Suppliers", reports: "Sales Reports", settings: "Admin Settings" };
@@ -432,7 +432,7 @@ function DashboardView({ products, setProducts, notify, dbLive, syncProduct, onA
   const totalStock = products.reduce((a, p) => a + p.stock, 0);
   const lowCount = products.filter((p) => p.stock > 0 && p.stock <= p.threshold).length;
   const outCount = products.filter((p) => p.stock === 0).length;
-  const revenue = 12380000;
+  const revenue = 12380;
   const topProducts = [...products].sort((a, b) => (b.price * (120 - b.stock)) - (a.price * (120 - a.stock))).slice(0, 4);
   const lowList = products.filter((p) => p.stock <= p.threshold).slice(0, 5);
   const [now, setNow] = useState(() => new Date());
@@ -446,7 +446,7 @@ function DashboardView({ products, setProducts, notify, dbLive, syncProduct, onA
     downloadCSV("stockpilot-summary.csv",
       ["Metric", "Value"],
       [["Total Stock (units)", totalStock], ["Low Stock Alerts", lowCount + outCount],
-       ["Out of Stock", outCount], ["Daily Sales (orders)", 312], ["Total Revenue (Rp)", revenue]]);
+       ["Out of Stock", outCount], ["Daily Sales (orders)", 312], ["Total Revenue ($)", revenue]]);
     notify("Summary exported as CSV");
   };
 
@@ -478,7 +478,7 @@ function DashboardView({ products, setProducts, notify, dbLive, syncProduct, onA
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard icon={Boxes} label="Total Stock" value={totalStock.toLocaleString() + " units"} delta="+4.2%" up tint="bg-gradient-to-br from-primary-500 to-indigo-700" sub="Across 12 active SKUs" />
         <StatCard icon={AlertTriangle} label="Low Stock Alerts" value={String(lowCount + outCount)} delta="+2 today" up={false} tint="bg-gradient-to-br from-amber-400 to-orange-600" sub={`${outCount} out of stock · ${lowCount} running low`} />
-        <StatCard icon={ShoppingCart} label="Daily Sales" value="312 orders" delta="+12.5%" up tint="bg-gradient-to-br from-emerald-400 to-teal-600" sub="Avg. basket Rp39.700" />
+        <StatCard icon={ShoppingCart} label="Daily Sales" value="312 orders" delta="+12.5%" up tint="bg-gradient-to-br from-emerald-400 to-teal-600" sub="Avg. basket $9.80" />
         <StatCard icon={Wallet} label="Total Revenue" value={money(revenue)} delta="+8.1%" up tint="bg-gradient-to-br from-sky-400 to-blue-700" sub="Today · all channels" />
       </div>
 
@@ -490,7 +490,7 @@ function DashboardView({ products, setProducts, notify, dbLive, syncProduct, onA
               <p className="text-xs text-slate-500 dark:text-slate-400">Last 7 days · updated live</p>
             </div>
             <div className="ml-auto flex items-center gap-4 text-xs font-medium">
-              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#4F46E5]" /> Sales (Rp)</span>
+              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#4F46E5]" /> Sales ($)</span>
               <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#10B981]" /> Stock movement</span>
             </div>
           </div>
@@ -624,14 +624,14 @@ function InventoryView({ products, setProducts, notify, globalQuery, onAdd, onEd
   const exportInventory = () => {
     if (!filtered.length) { notify("Nothing to export"); return; }
     downloadCSV("stockpilot-inventory.csv",
-      ["SKU", "Name", "Category", "Stock", "Threshold", "Cost (Rp)", "Price (Rp)", "Supplier"],
+      ["SKU", "Name", "Category", "Stock", "Threshold", "Cost ($)", "Price ($)", "Supplier"],
       productRows(filtered));
     notify(`${filtered.length} products exported as CSV`);
   };
   const exportLabels = () => {
     const list = products.filter((p) => selected.includes(p.id));
     if (!list.length) { notify("Select products first"); return; }
-    downloadCSV("stockpilot-labels.csv", ["SKU", "Name", "Price (Rp)"], list.map((p) => [p.sku, p.name, p.price]));
+    downloadCSV("stockpilot-labels.csv", ["SKU", "Name", "Price ($)"], list.map((p) => [p.sku, p.name, p.price]));
     notify(`${list.length} labels exported as CSV`);
   };
 
@@ -760,7 +760,7 @@ function PosView({ products, setProducts, notify, syncProduct }) {
   };
   const lines = cart.map((c) => ({ ...c, p: products.find((p) => p.id === c.id) })).filter((l) => l.p);
   const subtotal = lines.reduce((a, l) => a + l.p.price * l.qty, 0);
-  const tax = subtotal * 0.11;
+  const tax = subtotal * 0.1;
   const total = subtotal + tax;
 
   const simulateScan = () => {
@@ -936,10 +936,10 @@ function SuppliersView({ suppliers, setSuppliers, notify, syncDeleteSupplier }) 
 /* ================= REPORTS ================= */
 function ReportsView({ notify }) {
   const [range, setRange] = useState("7D");
-  const LEDGER = [["Sep 22, 2026", 312, 4180000, "33%"], ["Sep 21, 2026", 298, 3860000, "31%"], ["Sep 20, 2026", 341, 3420000, "34%"], ["Sep 19, 2026", 276, 2780000, "30%"], ["Sep 18, 2026", 254, 2210000, "32%"]];
+  const LEDGER = [["Sep 22, 2026", 312, 4180, "33%"], ["Sep 21, 2026", 298, 3860, "31%"], ["Sep 20, 2026", 341, 3420, "34%"], ["Sep 19, 2026", 276, 2780, "30%"], ["Sep 18, 2026", 254, 2210, "32%"]];
 
   const exportLedger = () => {
-    downloadCSV("stockpilot-ledger.csv", ["Date", "Orders", "Revenue (Rp)", "Margin", "Status"],
+    downloadCSV("stockpilot-ledger.csv", ["Date", "Orders", "Revenue ($)", "Margin", "Status"],
       LEDGER.map(([d, o, r, m]) => [d, o, r, m, "Paid"]));
     notify(`${LEDGER.length} rows exported as CSV`);
   };
@@ -955,7 +955,7 @@ function ReportsView({ notify }) {
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {[["Gross Revenue", "Rp84.210.000", "+14.2%", true], ["Units Sold", "9.412", "+9.8%", true], ["Avg. Margin", "32.4%", "−0.6%", false]].map(([l, v, d, up]) => (
+        {[["Gross Revenue", "$84,210", "+14.2%", true], ["Units Sold", "9,412", "+9.8%", true], ["Avg. Margin", "32.4%", "−0.6%", false]].map(([l, v, d, up]) => (
           <div key={l} className="card p-5">
             <p className="text-[13px] font-medium text-slate-500 dark:text-slate-400">{l} · {range}</p>
             <p className="font-display text-3xl font-extrabold mt-1 tracking-tight">{v}</p>
@@ -992,7 +992,7 @@ function ReportsView({ notify }) {
               {LEDGER.map(([d, o, r, m]) => (
                 <tr key={d} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40">
                   <td className="px-5 py-3 font-semibold">{d}</td><td className="px-4 py-3 tabular-nums">{o}</td>
-                  <td className="px-4 py-3 text-right font-extrabold tabular-nums">{money(r)}</td>
+                  <td className="px-4 py-3 text-right font-extrabold tabular-nums">${Number(r).toLocaleString()}</td>
                   <td className="px-4 py-3 text-right tabular-nums text-emerald-600 dark:text-emerald-400 font-semibold">{m}</td>
                   <td className="px-5 py-3 text-right"><span className="badge bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">Paid</span></td>
                 </tr>
@@ -1007,13 +1007,13 @@ function ReportsView({ notify }) {
 
 /* ================= SETTINGS ================= */
 function SettingsView({ role, setRole, dark, toggleDark, notify, email, section }) {
-  const DEFAULT_STORE = { name: "Downtown Minimarket", phone: "+62 21 555 0100", address: "Jl. MH Thamrin No. 88, Jakarta", currency: "IDR (Rp)", timezone: "Asia/Jakarta (GMT+7)" };
+  const DEFAULT_STORE = { name: "Downtown Minimarket", phone: "+1 415 555 0100", address: "88 Market Street, San Francisco", currency: "USD ($)", timezone: "America/Los_Angeles (GMT-8)" };
   const [store, setStore] = useState(() => {
-    try { return { ...DEFAULT_STORE, ...JSON.parse(localStorage.getItem("stockpilot-store") || "{}") }; }
+    try { return { ...DEFAULT_STORE, ...JSON.parse(localStorage.getItem("stockpilot-store-v2") || "{}") }; }
     catch { return DEFAULT_STORE; }
   });
   const saveStore = () => {
-    try { localStorage.setItem("stockpilot-store", JSON.stringify(store)); } catch { /* storage unavailable */ }
+    try { localStorage.setItem("stockpilot-store-v2", JSON.stringify(store)); } catch { /* storage unavailable */ }
     notify("Store settings saved");
   };
   const [avatar, setAvatar] = useState(null);
@@ -1130,8 +1130,8 @@ function SettingsView({ role, setRole, dark, toggleDark, notify, email, section 
 
 /* ================= PRODUCT MODALS ================= */
 function ProductFormModal({ open, onClose, initial, onSave, notify }) {
-  const [f, setF] = useState(initial || { name: "", sku: "", category: "Beverages", stock: 50, threshold: 20, cost: 1000, price: 2000, supplier: "Java Roast Co." });
-  useEffect(() => { setF(initial || { name: "", sku: "", category: "Beverages", stock: 50, threshold: 20, cost: 1000, price: 2000, supplier: "Java Roast Co." }); }, [initial, open]);
+  const [f, setF] = useState(initial || { name: "", sku: "", category: "Beverages", stock: 50, threshold: 20, cost: 1, price: 2, supplier: "Java Roast Co." });
+  useEffect(() => { setF(initial || { name: "", sku: "", category: "Beverages", stock: 50, threshold: 20, cost: 1, price: 2, supplier: "Java Roast Co." }); }, [initial, open]);
   if (!open) return null;
   const set = (k, v) => setF({ ...f, [k]: v });
   const save = () => {

@@ -2,7 +2,7 @@
 
 Modern, minimal inventory management web app for retail stores & minimarkets. Built with **React + Vite + Tailwind CSS + Lucide Icons + Recharts**, hosted on **Vercel**, database on **Neon (PostgreSQL)**.
 
-**Live demo:** `https://<your-app>.vercel.app` _(replace after deploy)_
+**Live demo:**  https://stockpilot-inventory-rust.vercel.app _(replace after deploy)_
 
 ## Demo login
 
@@ -37,7 +37,7 @@ Optional local DB: copy `.env.example` to `.env` and fill `DATABASE_URL`.
 2. **GitHub** — push this repo.
 3. **Vercel** — Import the repo (Framework Preset: **Vite**). Add env var:
    - `DATABASE_URL` = your Neon pooled connection string (all environments)
-4. Deploy, then open **`https://<your-app>.vercel.app/api/seed` once** to create tables + demo data.
+4.  Deploy, then open **https://stockpilot-inventory-rust.vercel.app/api/seed once** to create tables + demo data.
 5. (Optional) delete `api/seed.js` and redeploy so the seed endpoint is gone.
 
 Without `DATABASE_URL` the app still runs fully on built-in demo data (badge shows “Demo data”; with DB connected it shows “Neon Live”).

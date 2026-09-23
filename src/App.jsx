@@ -86,9 +86,11 @@ function Toast({ toast }) {
   );
 }
 
-function StatCard({ icon: Icon, label, value, delta, up, tint, sub }) {
+function StatCard({ icon: Icon, label, value, delta, up, tint, sub, onClick }) {
   return (
-    <div className="card p-5 hover:shadow-card transition group">
+    <div onClick={onClick} role={onClick ? "button" : undefined} tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") onClick(); } : undefined}
+      className={cx("card p-5 hover:shadow-card transition group text-left w-full", onClick && "cursor-pointer hover:-translate-y-0.5")}>
       <div className="flex items-start justify-between">
         <div className={cx("grid place-items-center h-11 w-11 rounded-2xl text-white shadow-soft", tint)}>
           <Icon size={20} />
@@ -428,7 +430,7 @@ function Topbar({ onMenu, dark, toggleDark, role, email, onLogout, query, setQue
 }
 
 /* ================= DASHBOARD ================= */
-function DashboardView({ products, setProducts, notify, dbLive, syncProduct, onAdd }) {
+function DashboardView({ products, setProducts, notify, dbLive, syncProduct, onAdd, onNavigate, setCat, setStatus }) {
   const totalStock = products.reduce((a, p) => a + p.stock, 0);
   const lowCount = products.filter((p) => p.stock > 0 && p.stock <= p.threshold).length;
   const outCount = products.filter((p) => p.stock === 0).length;
@@ -476,10 +478,10 @@ function DashboardView({ products, setProducts, notify, dbLive, syncProduct, onA
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatCard icon={Boxes} label="Total Stock" value={totalStock.toLocaleString() + " units"} delta="+4.2%" up tint="bg-gradient-to-br from-primary-500 to-indigo-700" sub="Across 12 active SKUs" />
-        <StatCard icon={AlertTriangle} label="Low Stock Alerts" value={String(lowCount + outCount)} delta="+2 today" up={false} tint="bg-gradient-to-br from-amber-400 to-orange-600" sub={`${outCount} out of stock · ${lowCount} running low`} />
-        <StatCard icon={ShoppingCart} label="Daily Sales" value="312 orders" delta="+12.5%" up tint="bg-gradient-to-br from-emerald-400 to-teal-600" sub="Avg. basket $9.80" />
-        <StatCard icon={Wallet} label="Total Revenue" value={money(revenue)} delta="+8.1%" up tint="bg-gradient-to-br from-sky-400 to-blue-700" sub="Today · all channels" />
+        <StatCard icon={Boxes} label="Total Stock" value={totalStock.toLocaleString() + " units"} delta="+4.2%" up tint="bg-gradient-to-br from-primary-500 to-indigo-700" sub={`Across ${products.length} active SKUs`} onClick={() => { setCat("All"); setStatus("All"); onNavigate("inventory"); }} />
+        <StatCard icon={AlertTriangle} label="Low Stock Alerts" value={String(lowCount + outCount)} delta="+2 today" up={false} tint="bg-gradient-to-br from-amber-400 to-orange-600" sub={`${outCount} out of stock · ${lowCount} running low`} onClick={() => { setCat("All"); setStatus("Low Stock"); onNavigate("inventory"); }} />
+        <StatCard icon={ShoppingCart} label="Daily Sales" value="312 orders" delta="+12.5%" up tint="bg-gradient-to-br from-emerald-400 to-teal-600" sub="Avg. basket $9.80" onClick={() => onNavigate("reports")} />
+        <StatCard icon={Wallet} label="Total Revenue" value={money(revenue)} delta="+8.1%" up tint="bg-gradient-to-br from-sky-400 to-blue-700" sub="Today · all channels" onClick={() => onNavigate("reports")} />
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
@@ -588,9 +590,7 @@ function DashboardView({ products, setProducts, notify, dbLive, syncProduct, onA
 }
 
 /* ================= INVENTORY ================= */
-function InventoryView({ products, setProducts, notify, globalQuery, onAdd, onEdit, onDelete, onRestock, selected, setSelected, syncDeleteProduct }) {
-  const [cat, setCat] = useState("All");
-  const [status, setStatus] = useState("All");
+function InventoryView({ products, setProducts, notify, globalQuery, onAdd, onEdit, onDelete, onRestock, selected, setSelected, syncDeleteProduct, cat, setCat, status, setStatus }) {
   const [localQ, setLocalQ] = useState("");
   const q = (globalQuery || localQ).toLowerCase();
 
@@ -1218,6 +1218,8 @@ export default function App() {
   const [products, setProducts] = useState(INITIAL_PRODUCTS);
   const [suppliers, setSuppliers] = useState(INITIAL_SUPPLIERS);
   const [query, setQuery] = useState("");
+  const [invCat, setInvCat] = useState("All");
+  const [invStatus, setInvStatus] = useState("All");
   const [selected, setSelected] = useState([]);
   const [toast, setToast] = useState(null);
   const [settingsSection, setSettingsSection] = useState(null);
@@ -1271,11 +1273,12 @@ export default function App() {
       <div className="flex-1 min-w-0 flex flex-col min-h-screen">
         <Topbar onMenu={() => setMobileOpen(true)} dark={dark} toggleDark={() => setDark(!dark)} role={role} email={email} onLogout={() => { setScreen("login"); setSelected([]); }} query={query} setQuery={setQuery} active={active} onNavigate={navigate} />
         <main className="flex-1 p-4 sm:p-6 max-w-[1400px] w-full mx-auto">
-          {active === "dashboard" && <DashboardView products={products} setProducts={setProducts} notify={notify} dbLive={dbLive} syncProduct={syncProduct} onAdd={() => setShowAdd(true)} />}
+          {active === "dashboard" && <DashboardView products={products} setProducts={setProducts} notify={notify} dbLive={dbLive} syncProduct={syncProduct} onAdd={() => setShowAdd(true)} onNavigate={navigate} setCat={setInvCat} setStatus={setInvStatus} />}
           {active === "inventory" && (
             <InventoryView products={products} setProducts={setProducts} notify={notify} globalQuery={query}
               onAdd={() => setShowAdd(true)} onEdit={setEditing} onDelete={setDeleting}
-              onRestock={(p) => { setRestocking(p); setRestockQty(50); }} selected={selected} setSelected={setSelected} syncDeleteProduct={syncDeleteProduct} />
+              onRestock={(p) => { setRestocking(p); setRestockQty(50); }} selected={selected} setSelected={setSelected} syncDeleteProduct={syncDeleteProduct}
+              cat={invCat} setCat={setInvCat} status={invStatus} setStatus={setInvStatus} />
           )}
           {active === "pos" && <PosView products={products} setProducts={setProducts} notify={notify} syncProduct={syncProduct} />}
           {active === "suppliers" && <SuppliersView suppliers={suppliers} setSuppliers={setSuppliers} notify={notify} onAdd={() => setShowSupplierAdd(true)} syncDeleteSupplier={syncDeleteSupplier} />}

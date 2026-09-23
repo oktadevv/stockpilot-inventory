@@ -22,8 +22,8 @@ const cx = (...c) => c.filter(Boolean).join(" ");
 const money = (n) => "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const PIE_COLORS = ["#4F46E5", "#10B981", "#F59E0B", "#0EA5E9", "#94A3B8"];
 
-function greeting() {
-  const h = new Date().getHours();
+function greeting(d = new Date()) {
+  const h = d.getHours();
   if (h >= 5 && h < 12) return { text: "Good morning", emoji: "👋" };
   if (h >= 12 && h < 15) return { text: "Good afternoon", emoji: "☀️" };
   if (h >= 15 && h < 19) return { text: "Good evening", emoji: "🌤️" };
@@ -425,7 +425,12 @@ function DashboardView({ products, notify, dbLive }) {
   const revenue = 12380;
   const topProducts = [...products].sort((a, b) => (b.price * (120 - b.stock)) - (a.price * (120 - a.stock))).slice(0, 4);
   const lowList = products.filter((p) => p.stock <= p.threshold).slice(0, 5);
-  const g = greeting();
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(t);
+  }, []);
+  const g = greeting(now);
 
   return (
     <div className="space-y-5">

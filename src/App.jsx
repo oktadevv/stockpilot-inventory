@@ -335,7 +335,7 @@ function Topbar({ onMenu, dark, toggleDark, role, email, onLogout, query, setQue
       <button onClick={onMenu} className="lg:hidden p-2 rounded-xl hover:bg-slate-200/60 dark:hover:bg-slate-700/60"><Menu size={20} /></button>
       <div className="min-w-0">
         <h1 className="font-display font-extrabold text-lg sm:text-xl tracking-tight truncate">{titles[active]}</h1>
-        <p className="hidden sm:block text-xs text-slate-500 dark:text-slate-400 truncate">{subs[active]} · Tue, Sep 22 2026</p>
+        <p className="hidden sm:block text-xs text-slate-500 dark:text-slate-400 truncate">{subs[active]} · {new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}</p>
       </div>
       <div className="ml-auto flex items-center gap-2">
         <div className="hidden md:flex items-center relative">

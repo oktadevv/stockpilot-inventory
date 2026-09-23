@@ -19,8 +19,18 @@ import { api } from "./api.js";
 
 /* ---------- helpers ---------- */
 const cx = (...c) => c.filter(Boolean).join(" ");
-const money = (n) => "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const money = (n) => "Rp" + Number(n).toLocaleString("id-ID", { maximumFractionDigits: 0 });
 const PIE_COLORS = ["#4F46E5", "#10B981", "#F59E0B", "#0EA5E9", "#94A3B8"];
+
+function downloadCSV(filename, headers, rows) {
+  const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const csv = [headers.map(esc).join(","), ...rows.map((r) => r.map(esc).join(","))].join("\n");
+  const url = URL.createObjectURL(new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" }));
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
 
 function greeting(d = new Date()) {
   const h = d.getHours();
@@ -95,7 +105,7 @@ function StatCard({ icon: Icon, label, value, delta, up, tint, sub }) {
 }
 
 /* ================= LOGIN ================= */
-function LoginScreen({ onLogin }) {
+function LoginScreen({ onLogin, notify }) {
   const [email, setEmail] = useState("admin@stockpilot.io");
   const [pw, setPw] = useState("admin123");
   const [show, setShow] = useState(false);
@@ -194,7 +204,7 @@ function LoginScreen({ onLogin }) {
                   </button>
                   Remember me
                 </label>
-                <button type="button" className="font-semibold text-primary-600 dark:text-primary-300 hover:underline">Forgot password?</button>
+                <button type="button" onClick={() => { if (!email.includes("@")) { setErr("Enter your email first, then request a reset link."); return; } if (notify) notify(`Reset link sent to ${email} (demo)`); }} className="font-semibold text-primary-600 dark:text-primary-300 hover:underline">Forgot password?</button>
               </div>
               <button className="btn-primary w-full !py-3 text-[15px]">Sign in securely <ArrowRightLeft size={16} className="rotate-180" /></button>
             </form>
@@ -333,7 +343,7 @@ function Topbar({ onMenu, dark, toggleDark, role, email, onLogout, query, setQue
   const [notifs, setNotifs] = useState([
     { id: 1, icon: AlertTriangle, tint: "bg-amber-500/15 text-amber-500", title: "Low stock warning", desc: "Dark Chocolate Bar tinggal 9 pcs — segera restock.", time: "2 mnt lalu", unread: true },
     { id: 2, icon: Truck, tint: "bg-emerald-500/15 text-emerald-500", title: "Pesanan diterima", desc: "PO-2081 dari GreenFarm Dairy sudah tiba di gudang.", time: "1 jam lalu", unread: true },
-    { id: 3, icon: BarChart3, tint: "bg-primary-600/10 text-primary-600 dark:text-primary-300", title: "Laporan harian siap", desc: "Penjualan hari ini $4,180 dari 312 order.", time: "3 jam lalu", unread: true },
+    { id: 3, icon: BarChart3, tint: "bg-primary-600/10 text-primary-600 dark:text-primary-300", title: "Laporan harian siap", desc: "Penjualan hari ini Rp4.180.000 dari 312 order.", time: "3 jam lalu", unread: true },
   ]);
   const unread = notifs.filter((n) => n.unread).length;
   const titles = { dashboard: "Dashboard", inventory: "Inventory", pos: "POS & Stock Control", suppliers: "Suppliers", reports: "Sales Reports", settings: "Admin Settings" };
@@ -418,11 +428,11 @@ function Topbar({ onMenu, dark, toggleDark, role, email, onLogout, query, setQue
 }
 
 /* ================= DASHBOARD ================= */
-function DashboardView({ products, notify, dbLive }) {
+function DashboardView({ products, setProducts, notify, dbLive, syncProduct, onAdd }) {
   const totalStock = products.reduce((a, p) => a + p.stock, 0);
   const lowCount = products.filter((p) => p.stock > 0 && p.stock <= p.threshold).length;
   const outCount = products.filter((p) => p.stock === 0).length;
-  const revenue = 12380;
+  const revenue = 12380000;
   const topProducts = [...products].sort((a, b) => (b.price * (120 - b.stock)) - (a.price * (120 - a.stock))).slice(0, 4);
   const lowList = products.filter((p) => p.stock <= p.threshold).slice(0, 5);
   const [now, setNow] = useState(() => new Date());
@@ -431,6 +441,22 @@ function DashboardView({ products, notify, dbLive }) {
     return () => clearInterval(t);
   }, []);
   const g = greeting(now);
+
+  const exportSummary = () => {
+    downloadCSV("stockpilot-summary.csv",
+      ["Metric", "Value"],
+      [["Total Stock (units)", totalStock], ["Low Stock Alerts", lowCount + outCount],
+       ["Out of Stock", outCount], ["Daily Sales (orders)", 312], ["Total Revenue (Rp)", revenue]]);
+    notify("Summary exported as CSV");
+  };
+
+  const restockAll = () => {
+    if (!lowList.length) { notify("All stocked — nothing to restock"); return; }
+    const next = products.map((p) => p.stock <= p.threshold ? { ...p, stock: p.threshold * 2 } : p);
+    if (syncProduct) lowList.forEach((p) => syncProduct({ ...p, stock: p.threshold * 2 }));
+    if (setProducts) setProducts(next);
+    notify(`Restocked ${lowList.length} items to safe level`);
+  };
 
   return (
     <div className="space-y-5">
@@ -444,15 +470,15 @@ function DashboardView({ products, notify, dbLive }) {
             : <span className="badge bg-slate-200/70 text-slate-500 dark:bg-slate-700/60 dark:text-slate-400 ring-1 ring-slate-200 dark:ring-slate-600"><span className="h-1.5 w-1.5 rounded-full bg-slate-400" /> Demo data</span>}</p>
         </div>
         <div className="relative sm:ml-auto flex gap-2">
-          <button onClick={() => notify("Report exported as PDF")} className="btn-ghost text-[13px]"><Download size={15} /> Export</button>
-          <button onClick={() => notify("Use Inventory → Add Product")} className="btn-primary text-[13px]"><Plus size={15} /> Add Product</button>
+          <button onClick={exportSummary} className="btn-ghost text-[13px]"><Download size={15} /> Export</button>
+          <button onClick={onAdd} className="btn-primary text-[13px]"><Plus size={15} /> Add Product</button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard icon={Boxes} label="Total Stock" value={totalStock.toLocaleString() + " units"} delta="+4.2%" up tint="bg-gradient-to-br from-primary-500 to-indigo-700" sub="Across 12 active SKUs" />
         <StatCard icon={AlertTriangle} label="Low Stock Alerts" value={String(lowCount + outCount)} delta="+2 today" up={false} tint="bg-gradient-to-br from-amber-400 to-orange-600" sub={`${outCount} out of stock · ${lowCount} running low`} />
-        <StatCard icon={ShoppingCart} label="Daily Sales" value="312 orders" delta="+12.5%" up tint="bg-gradient-to-br from-emerald-400 to-teal-600" sub="Avg. basket $9.80" />
+        <StatCard icon={ShoppingCart} label="Daily Sales" value="312 orders" delta="+12.5%" up tint="bg-gradient-to-br from-emerald-400 to-teal-600" sub="Avg. basket Rp39.700" />
         <StatCard icon={Wallet} label="Total Revenue" value={money(revenue)} delta="+8.1%" up tint="bg-gradient-to-br from-sky-400 to-blue-700" sub="Today · all channels" />
       </div>
 
@@ -464,7 +490,7 @@ function DashboardView({ products, notify, dbLive }) {
               <p className="text-xs text-slate-500 dark:text-slate-400">Last 7 days · updated live</p>
             </div>
             <div className="ml-auto flex items-center gap-4 text-xs font-medium">
-              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#4F46E5]" /> Sales ($)</span>
+              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#4F46E5]" /> Sales (Rp)</span>
               <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#10B981]" /> Stock movement</span>
             </div>
           </div>
@@ -554,7 +580,7 @@ function DashboardView({ products, notify, dbLive }) {
               );
             })}
           </div>
-          <button onClick={() => notify("Purchase orders drafted for low-stock items")} className="btn-ghost w-full mt-4 text-[13px]"><PackagePlus size={15} /> Restock all</button>
+          <button onClick={restockAll} className="btn-ghost w-full mt-4 text-[13px]"><PackagePlus size={15} /> Restock all</button>
         </div>
       </div>
     </div>
@@ -587,6 +613,28 @@ function InventoryView({ products, setProducts, notify, globalQuery, onAdd, onEd
     setSelected([]);
   };
 
+  const PAGE_SIZE = 8;
+  const [page, setPage] = useState(1);
+  useEffect(() => { setPage(1); }, [q, cat, status, products.length]);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pageItems = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const productRows = (list) => list.map((p) => [p.sku, p.name, p.category, p.stock, p.threshold, p.cost, p.price, p.supplier]);
+  const exportInventory = () => {
+    if (!filtered.length) { notify("Nothing to export"); return; }
+    downloadCSV("stockpilot-inventory.csv",
+      ["SKU", "Name", "Category", "Stock", "Threshold", "Cost (Rp)", "Price (Rp)", "Supplier"],
+      productRows(filtered));
+    notify(`${filtered.length} products exported as CSV`);
+  };
+  const exportLabels = () => {
+    const list = products.filter((p) => selected.includes(p.id));
+    if (!list.length) { notify("Select products first"); return; }
+    downloadCSV("stockpilot-labels.csv", ["SKU", "Name", "Price (Rp)"], list.map((p) => [p.sku, p.name, p.price]));
+    notify(`${list.length} labels exported as CSV`);
+  };
+
   return (
     <div className="space-y-4">
       <div className="card p-4 flex flex-col gap-3">
@@ -602,7 +650,7 @@ function InventoryView({ products, setProducts, notify, globalQuery, onAdd, onEd
                 {["All", "In Stock", "Low Stock", "Out of Stock"].map((s) => <option key={s}>{s}</option>)}
               </select>
             </div>
-            <button onClick={() => notify("Inventory exported as CSV")} className="btn-ghost text-[13px] whitespace-nowrap"><Download size={15} /> <span className="hidden sm:inline">Export</span></button>
+            <button onClick={exportInventory} className="btn-ghost text-[13px] whitespace-nowrap"><Download size={15} /> <span className="hidden sm:inline">Export</span></button>
             <button onClick={onAdd} className="btn-primary text-[13px] whitespace-nowrap"><Plus size={15} /> <span className="hidden sm:inline">Add Product</span><span className="sm:hidden">Add</span></button>
           </div>
         </div>
@@ -618,7 +666,7 @@ function InventoryView({ products, setProducts, notify, globalQuery, onAdd, onEd
           <span className="badge bg-white/15 dark:bg-slate-900/10 ring-1 ring-white/20 dark:ring-slate-900/15"><Check size={13} /> {selected.length} selected</span>
           <div className="flex gap-2 ml-auto">
             <button onClick={() => notify(`${selected.length} items marked for restock`)} className="rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold px-3.5 py-2 transition">Restock</button>
-            <button onClick={() => notify("Labels sent to printer")} className="rounded-xl bg-white/15 dark:bg-slate-900/10 hover:bg-white/25 text-xs font-bold px-3.5 py-2 transition flex items-center gap-1.5"><Printer size={13} /> Labels</button>
+            <button onClick={exportLabels} className="rounded-xl bg-white/15 dark:bg-slate-900/10 hover:bg-white/25 text-xs font-bold px-3.5 py-2 transition flex items-center gap-1.5"><Printer size={13} /> Labels</button>
             <button onClick={bulkDelete} className="rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold px-3.5 py-2 transition">Delete</button>
             <button onClick={() => setSelected([])} className="rounded-xl text-xs font-bold px-2 py-2 opacity-70 hover:opacity-100"><X size={15} /></button>
           </div>
@@ -640,7 +688,7 @@ function InventoryView({ products, setProducts, notify, globalQuery, onAdd, onEd
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
-              {filtered.map((p) => {
+              {pageItems.map((p) => {
                 const s = stockStatus(p.stock, p.threshold);
                 return (
                   <tr key={p.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition group">
@@ -687,9 +735,9 @@ function InventoryView({ products, setProducts, notify, globalQuery, onAdd, onEd
           </div>
         )}
         <div className="flex items-center justify-between px-5 py-3.5 border-t border-slate-200/70 dark:border-slate-700/50 text-xs text-slate-500 dark:text-slate-400">
-          <p>Showing <span className="font-bold text-slate-700 dark:text-slate-200">{filtered.length}</span> of {products.length} products</p>
+          <p>Showing <span className="font-bold text-slate-700 dark:text-slate-200">{pageItems.length}</span> of {filtered.length} products · page {safePage}/{totalPages}</p>
           <div className="flex gap-1.5">
-            {[1, 2, 3].map((n) => <button key={n} className={cx("h-8 w-8 grid place-items-center rounded-lg font-bold transition", n === 1 ? "bg-primary-600 text-white" : "hover:bg-slate-100 dark:hover:bg-slate-700")}>{n}</button>)}
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => <button key={n} onClick={() => setPage(n)} className={cx("h-8 w-8 grid place-items-center rounded-lg font-bold transition", n === safePage ? "bg-primary-600 text-white" : "hover:bg-slate-100 dark:hover:bg-slate-700")}>{n}</button>)}
           </div>
         </div>
       </div>
@@ -712,7 +760,7 @@ function PosView({ products, setProducts, notify, syncProduct }) {
   };
   const lines = cart.map((c) => ({ ...c, p: products.find((p) => p.id === c.id) })).filter((l) => l.p);
   const subtotal = lines.reduce((a, l) => a + l.p.price * l.qty, 0);
-  const tax = subtotal * 0.1;
+  const tax = subtotal * 0.11;
   const total = subtotal + tax;
 
   const simulateScan = () => {
@@ -888,6 +936,13 @@ function SuppliersView({ suppliers, setSuppliers, notify, syncDeleteSupplier }) 
 /* ================= REPORTS ================= */
 function ReportsView({ notify }) {
   const [range, setRange] = useState("7D");
+  const LEDGER = [["Sep 22, 2026", 312, 4180000, "33%"], ["Sep 21, 2026", 298, 3860000, "31%"], ["Sep 20, 2026", 341, 3420000, "34%"], ["Sep 19, 2026", 276, 2780000, "30%"], ["Sep 18, 2026", 254, 2210000, "32%"]];
+
+  const exportLedger = () => {
+    downloadCSV("stockpilot-ledger.csv", ["Date", "Orders", "Revenue (Rp)", "Margin", "Status"],
+      LEDGER.map(([d, o, r, m]) => [d, o, r, m, "Paid"]));
+    notify(`${LEDGER.length} rows exported as CSV`);
+  };
   return (
     <div className="space-y-4">
       <div className="card p-4 flex flex-wrap items-center gap-2">
@@ -895,12 +950,12 @@ function ReportsView({ notify }) {
           <button key={r} onClick={() => setRange(r)} className={cx("rounded-xl px-4 py-2 text-xs font-bold transition", range === r ? "bg-primary-600 text-white shadow-soft" : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700")}>{r}</button>
         ))}
         <div className="ml-auto flex gap-2">
-          <button onClick={() => notify("Report exported as Excel")} className="btn-ghost text-[13px]"><Download size={15} /> Excel</button>
-          <button onClick={() => notify("Report exported as PDF")} className="btn-primary text-[13px]"><Printer size={15} /> PDF</button>
+          <button onClick={exportLedger} className="btn-ghost text-[13px]"><Download size={15} /> Excel</button>
+          <button onClick={() => window.print()} className="btn-primary text-[13px]"><Printer size={15} /> PDF</button>
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {[["Gross Revenue", "$84,210", "+14.2%", true], ["Units Sold", "9,412", "+9.8%", true], ["Avg. Margin", "32.4%", "−0.6%", false]].map(([l, v, d, up]) => (
+        {[["Gross Revenue", "Rp84.210.000", "+14.2%", true], ["Units Sold", "9.412", "+9.8%", true], ["Avg. Margin", "32.4%", "−0.6%", false]].map(([l, v, d, up]) => (
           <div key={l} className="card p-5">
             <p className="text-[13px] font-medium text-slate-500 dark:text-slate-400">{l} · {range}</p>
             <p className="font-display text-3xl font-extrabold mt-1 tracking-tight">{v}</p>
@@ -934,10 +989,10 @@ function ReportsView({ notify }) {
               <th className="px-5 py-3">Date</th><th className="px-4 py-3">Orders</th><th className="px-4 py-3 text-right">Revenue</th><th className="px-4 py-3 text-right">Margin</th><th className="px-5 py-3 text-right">Status</th>
             </tr></thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
-              {[["Sep 22, 2026", 312, 4180, "33%"], ["Sep 21, 2026", 298, 3860, "31%"], ["Sep 20, 2026", 341, 3420, "34%"], ["Sep 19, 2026", 276, 2780, "30%"], ["Sep 18, 2026", 254, 2210, "32%"]].map(([d, o, r, m]) => (
+              {LEDGER.map(([d, o, r, m]) => (
                 <tr key={d} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40">
                   <td className="px-5 py-3 font-semibold">{d}</td><td className="px-4 py-3 tabular-nums">{o}</td>
-                  <td className="px-4 py-3 text-right font-extrabold tabular-nums">${Number(r).toLocaleString()}</td>
+                  <td className="px-4 py-3 text-right font-extrabold tabular-nums">{money(r)}</td>
                   <td className="px-4 py-3 text-right tabular-nums text-emerald-600 dark:text-emerald-400 font-semibold">{m}</td>
                   <td className="px-5 py-3 text-right"><span className="badge bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">Paid</span></td>
                 </tr>
@@ -952,7 +1007,32 @@ function ReportsView({ notify }) {
 
 /* ================= SETTINGS ================= */
 function SettingsView({ role, setRole, dark, toggleDark, notify, email, section }) {
-  const [store, setStore] = useState({ name: "Downtown Minimarket", phone: "+1 415 555 0100", address: "88 Market Street, San Francisco", currency: "USD ($)", timezone: "Asia/Jakarta (GMT+7)" });
+  const DEFAULT_STORE = { name: "Downtown Minimarket", phone: "+62 21 555 0100", address: "Jl. MH Thamrin No. 88, Jakarta", currency: "IDR (Rp)", timezone: "Asia/Jakarta (GMT+7)" };
+  const [store, setStore] = useState(() => {
+    try { return { ...DEFAULT_STORE, ...JSON.parse(localStorage.getItem("stockpilot-store") || "{}") }; }
+    catch { return DEFAULT_STORE; }
+  });
+  const saveStore = () => {
+    try { localStorage.setItem("stockpilot-store", JSON.stringify(store)); } catch { /* storage unavailable */ }
+    notify("Store settings saved");
+  };
+  const [avatar, setAvatar] = useState(null);
+  const avatarInput = React.useRef(null);
+  const pickAvatar = (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    setAvatar(URL.createObjectURL(f));
+    notify("Avatar updated");
+  };
+  const [curPw, setCurPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const changePassword = () => {
+    if (!curPw || !newPw) { notify("Fill both password fields"); return; }
+    if (newPw.length < 6) { notify("New password min. 6 characters"); return; }
+    if (curPw === newPw) { notify("New password must differ"); return; }
+    setCurPw(""); setNewPw("");
+    notify("Password updated successfully");
+  };
   const [notif, setNotif] = useState({ lowStock: true, dailyReport: true, newOrder: false, promo: false });
   useEffect(() => {
     if (!section) return;
@@ -969,12 +1049,15 @@ function SettingsView({ role, setRole, dark, toggleDark, notify, email, section 
         <div id="settings-profile" className="card p-5 sm:p-6 scroll-mt-24 transition">
           <h3 className="font-display font-bold flex items-center gap-2"><User size={17} className="text-primary-600" /> Admin Profile</h3>
           <div className="mt-4 flex items-center gap-4">
-            <span className="grid place-items-center h-16 w-16 rounded-3xl bg-gradient-to-br from-primary-600 to-indigo-700 text-white font-display font-extrabold text-2xl shrink-0">A</span>
+            <span className="grid place-items-center h-16 w-16 rounded-3xl bg-gradient-to-br from-primary-600 to-indigo-700 text-white font-display font-extrabold text-2xl shrink-0 overflow-hidden">
+              {avatar ? <img src={avatar} alt="avatar" className="h-full w-full object-cover" /> : "A"}
+            </span>
             <div>
               <p className="font-bold">{email}</p>
               <span className="badge mt-1 bg-primary-600/10 text-primary-600 dark:text-primary-300 ring-1 ring-primary-600/20">{role === "Super Admin" ? <ShieldCheck size={12} /> : <Store size={12} />} {role}</span>
             </div>
-            <button onClick={() => notify("Avatar upload opened")} className="ml-auto btn-ghost text-[13px]">Change</button>
+            <input ref={avatarInput} type="file" accept="image/*" onChange={pickAvatar} className="hidden" />
+            <button onClick={() => avatarInput.current && avatarInput.current.click()} className="ml-auto btn-ghost text-[13px]">Change</button>
           </div>
           <div className="mt-4 grid sm:grid-cols-2 gap-3">
             <div><label className="text-xs font-semibold text-slate-500">Display name</label><input defaultValue="Alex Morgan" className="input mt-1" /></div>
@@ -998,7 +1081,7 @@ function SettingsView({ role, setRole, dark, toggleDark, notify, email, section 
             ))}
             <div className="sm:col-span-2"><label className="text-xs font-semibold text-slate-500">Address</label><input value={store.address} onChange={(e) => setStore({ ...store, address: e.target.value })} className="input mt-1" /></div>
           </div>
-          <button onClick={() => notify("Store settings saved")} className="btn-primary mt-4 text-[13px]">Save changes</button>
+          <button onClick={saveStore} className="btn-primary mt-4 text-[13px]">Save changes</button>
         </div>
 
         <div className="card p-5 sm:p-6 !border-rose-200 dark:!border-rose-500/20">
@@ -1036,9 +1119,9 @@ function SettingsView({ role, setRole, dark, toggleDark, notify, email, section 
         </div>
         <div className="card p-5">
           <h3 className="font-display font-bold flex items-center gap-2"><Lock size={16} className="text-amber-500" /> Security</h3>
-          <input type="password" placeholder="Current password" className="input mt-3" />
-          <input type="password" placeholder="New password" className="input mt-2" />
-          <button onClick={() => notify("Password updated successfully")} className="btn-ghost w-full mt-3 text-[13px]">Update password</button>
+          <input type="password" placeholder="Current password" value={curPw} onChange={(e) => setCurPw(e.target.value)} className="input mt-3" />
+          <input type="password" placeholder="New password" value={newPw} onChange={(e) => setNewPw(e.target.value)} className="input mt-2" />
+          <button onClick={changePassword} className="btn-ghost w-full mt-3 text-[13px]">Update password</button>
         </div>
       </div>
     </div>
@@ -1047,8 +1130,8 @@ function SettingsView({ role, setRole, dark, toggleDark, notify, email, section 
 
 /* ================= PRODUCT MODALS ================= */
 function ProductFormModal({ open, onClose, initial, onSave, notify }) {
-  const [f, setF] = useState(initial || { name: "", sku: "", category: "Beverages", stock: 50, threshold: 20, cost: 1, price: 2, supplier: "Java Roast Co." });
-  useEffect(() => { setF(initial || { name: "", sku: "", category: "Beverages", stock: 50, threshold: 20, cost: 1, price: 2, supplier: "Java Roast Co." }); }, [initial, open]);
+  const [f, setF] = useState(initial || { name: "", sku: "", category: "Beverages", stock: 50, threshold: 20, cost: 1000, price: 2000, supplier: "Java Roast Co." });
+  useEffect(() => { setF(initial || { name: "", sku: "", category: "Beverages", stock: 50, threshold: 20, cost: 1000, price: 2000, supplier: "Java Roast Co." }); }, [initial, open]);
   if (!open) return null;
   const set = (k, v) => setF({ ...f, [k]: v });
   const save = () => {
@@ -1144,7 +1227,7 @@ export default function App() {
   const syncDeleteProduct = (id) => { api.deleteProduct(id).catch(() => {}); };
   const syncDeleteSupplier = (id) => { api.deleteSupplier(id).catch(() => {}); };
 
-  if (screen === "login") return (<><LoginScreen onLogin={(r, e) => { setRole(r); setEmail(e); setScreen("otp"); }} /><Toast toast={toast} /></>);
+  if (screen === "login") return (<><LoginScreen onLogin={(r, e) => { setRole(r); setEmail(e); setScreen("otp"); }} notify={notify} /><Toast toast={toast} /></>);
   if (screen === "otp") return (<><OtpScreen email={email} onBack={() => setScreen("login")} onVerify={() => { setScreen("app"); notify(`Welcome back — signed in as ${role}`); }} /><Toast toast={toast} /></>);
 
   return (
@@ -1153,7 +1236,7 @@ export default function App() {
       <div className="flex-1 min-w-0 flex flex-col min-h-screen">
         <Topbar onMenu={() => setMobileOpen(true)} dark={dark} toggleDark={() => setDark(!dark)} role={role} email={email} onLogout={() => { setScreen("login"); setSelected([]); }} query={query} setQuery={setQuery} active={active} onNavigate={navigate} />
         <main className="flex-1 p-4 sm:p-6 max-w-[1400px] w-full mx-auto">
-          {active === "dashboard" && <DashboardView products={products} notify={notify} dbLive={dbLive} />}
+          {active === "dashboard" && <DashboardView products={products} setProducts={setProducts} notify={notify} dbLive={dbLive} syncProduct={syncProduct} onAdd={() => setShowAdd(true)} />}
           {active === "inventory" && (
             <InventoryView products={products} setProducts={setProducts} notify={notify} globalQuery={query}
               onAdd={() => setShowAdd(true)} onEdit={setEditing} onDelete={setDeleting}

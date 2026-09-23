@@ -341,9 +341,9 @@ function Topbar({ onMenu, dark, toggleDark, role, email, onLogout, query, setQue
   const [open, setOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifs, setNotifs] = useState([
-    { id: 1, icon: AlertTriangle, tint: "bg-amber-500/15 text-amber-500", title: "Low stock warning", desc: "Dark Chocolate Bar tinggal 9 pcs — segera restock.", time: "2 mnt lalu", unread: true },
-    { id: 2, icon: Truck, tint: "bg-emerald-500/15 text-emerald-500", title: "Pesanan diterima", desc: "PO-2081 dari GreenFarm Dairy sudah tiba di gudang.", time: "1 jam lalu", unread: true },
-    { id: 3, icon: BarChart3, tint: "bg-primary-600/10 text-primary-600 dark:text-primary-300", title: "Laporan harian siap", desc: "Penjualan hari ini $4,180 dari 312 order.", time: "3 jam lalu", unread: true },
+    { id: 1, icon: AlertTriangle, tint: "bg-amber-500/15 text-amber-500", title: "Low stock warning", desc: "Dark Chocolate Bar is down to 9 pcs — restock soon.", time: "2 min ago", unread: true },
+    { id: 2, icon: Truck, tint: "bg-emerald-500/15 text-emerald-500", title: "Order received", desc: "PO-2081 from GreenFarm Dairy has arrived at the warehouse.", time: "1 hour ago", unread: true },
+    { id: 3, icon: BarChart3, tint: "bg-primary-600/10 text-primary-600 dark:text-primary-300", title: "Daily report ready", desc: "Today's sales: $4,180 from 312 orders.", time: "3 hours ago", unread: true },
   ]);
   const unread = notifs.filter((n) => n.unread).length;
   const titles = { dashboard: "Dashboard", inventory: "Inventory", pos: "POS & Stock Control", suppliers: "Suppliers", reports: "Sales Reports", settings: "Admin Settings" };
@@ -364,7 +364,7 @@ function Topbar({ onMenu, dark, toggleDark, role, email, onLogout, query, setQue
           {dark ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-slate-600" />}
         </button>
         <div className="relative">
-          <button onClick={() => { setNotifOpen(!notifOpen); setOpen(false); }} className="relative p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 hover:bg-slate-50 dark:hover:bg-slate-700/60 transition" title="Notifikasi">
+          <button onClick={() => { setNotifOpen(!notifOpen); setOpen(false); }} className="relative p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 hover:bg-slate-50 dark:hover:bg-slate-700/60 transition" title="Notifications">
             <Bell size={18} />
             {unread > 0 && <span className="absolute -top-1 -right-1 h-5 min-w-5 px-1 grid place-items-center rounded-full bg-rose-500 text-white text-[10px] font-bold">{unread}</span>}
           </button>
@@ -373,8 +373,8 @@ function Topbar({ onMenu, dark, toggleDark, role, email, onLogout, query, setQue
               <div className="fixed inset-0 z-10" onClick={() => setNotifOpen(false)} />
               <div className="absolute right-0 mt-2 w-80 max-w-[85vw] card p-2 z-20 shadow-2xl">
                 <div className="flex items-center justify-between px-3 py-2">
-                  <p className="font-display font-extrabold text-sm">Notifikasi</p>
-                  <button onClick={() => setNotifs(notifs.map((n) => ({ ...n, unread: false })))} className="text-[11px] font-bold text-primary-600 dark:text-primary-300 hover:underline">Tandai semua dibaca</button>
+                  <p className="font-display font-extrabold text-sm">Notifications</p>
+                  <button onClick={() => setNotifs(notifs.map((n) => ({ ...n, unread: false })))} className="text-[11px] font-bold text-primary-600 dark:text-primary-300 hover:underline">Mark all as read</button>
                 </div>
                 <div className="max-h-[320px] overflow-y-auto space-y-1">
                   {notifs.map((n) => (
@@ -392,7 +392,7 @@ function Topbar({ onMenu, dark, toggleDark, role, email, onLogout, query, setQue
                     </button>
                   ))}
                 </div>
-                <button onClick={() => setNotifOpen(false)} className="w-full mt-1 rounded-xl px-3 py-2.5 text-xs font-bold text-primary-600 dark:text-primary-300 hover:bg-slate-100 dark:hover:bg-slate-700/60">Lihat semua aktivitas</button>
+                <button onClick={() => setNotifOpen(false)} className="w-full mt-1 rounded-xl px-3 py-2.5 text-xs font-bold text-primary-600 dark:text-primary-300 hover:bg-slate-100 dark:hover:bg-slate-700/60">View all activity</button>
               </div>
             </>
           )}
@@ -417,7 +417,7 @@ function Topbar({ onMenu, dark, toggleDark, role, email, onLogout, query, setQue
                 {[["My profile", User, () => onNavigate("settings", "profile")], ["Store settings", Store, () => onNavigate("settings", "store")], ["Notifications", Bell, () => { setOpen(false); setNotifOpen(true); }]].map(([l, I, fn]) => (
                   <button key={l} onClick={fn} className="w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-medium hover:bg-slate-100 dark:hover:bg-slate-700/60 text-slate-600 dark:text-slate-300"><I size={16} />{l}</button>
                 ))}
-                <button onClick={onLogout} className="w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10"><LogOut size={16} /> Log out quickly</button>
+                <button onClick={onLogout} className="w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10"><LogOut size={16} /> Log out</button>
               </div>
             </>
           )}

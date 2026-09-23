@@ -16,7 +16,7 @@ export const INITIAL_PRODUCTS = [
 ];
 
 export const INITIAL_SUPPLIERS = [
-  { id: 1, name: "Java Roast Co.", contact: "Sinta Prabowo", email: "sales@javaroast.id", phone: "+62 812 3400 1122", products: 14, rating: 4.9, status: "Active", gradient: "from-violet-500 to-indigo-600", lastOrder: "Sep 18, 2026" },
+  { id: 1, name: "Java Roast Co.", contact: "Sarah Miller", email: "sales@javaroast.co", phone: "+1 415 555 0119", products: 14, rating: 4.9, status: "Active", gradient: "from-violet-500 to-indigo-600", lastOrder: "Sep 18, 2026" },
   { id: 2, name: "GreenFarm Dairy", contact: "Daniel Chen", email: "orders@greenfarm.co", phone: "+1 415 555 0132", products: 22, rating: 4.8, status: "Active", gradient: "from-emerald-400 to-teal-600", lastOrder: "Sep 20, 2026" },
   { id: 3, name: "CrunchLine Snacks", contact: "Amelia Hart", email: "hello@crunchline.com", phone: "+44 20 7946 0018", products: 31, rating: 4.6, status: "Active", gradient: "from-amber-400 to-orange-600", lastOrder: "Sep 15, 2026" },
   { id: 4, name: "CleanNest", contact: "Ravi Kumar", email: "b2b@cleannest.io", phone: "+91 98200 44321", products: 18, rating: 4.7, status: "Pending", gradient: "from-sky-400 to-blue-600", lastOrder: "Sep 10, 2026" },

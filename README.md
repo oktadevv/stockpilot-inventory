@@ -2,7 +2,7 @@
 
 Modern, minimal inventory management web app for retail stores & minimarkets. Built with **React + Vite + Tailwind CSS + Lucide Icons + Recharts**, hosted on **Vercel**, database on **Neon (PostgreSQL)**.
 
-**Live demo:**  https://stockpilot-inventory-rust.vercel.app _(replace after deploy)_
+**Live demo:**  https://stockpilot-inventory-rust.vercel.app
 
 ## Demo login
 

@@ -890,7 +890,7 @@ function PosView({ products, setProducts, notify, syncProduct }) {
 }
 
 /* ================= SUPPLIERS ================= */
-function SuppliersView({ suppliers, setSuppliers, notify, syncDeleteSupplier }) {
+function SuppliersView({ suppliers, setSuppliers, notify, onAdd, syncDeleteSupplier }) {
   const [q, setQ] = useState("");
   const list = suppliers.filter((s) => (s.name + s.contact + s.email).toLowerCase().includes(q.toLowerCase()));
   return (
@@ -900,7 +900,7 @@ function SuppliersView({ suppliers, setSuppliers, notify, syncDeleteSupplier }) 
           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search suppliers…" className="input !pl-10" />
         </div>
-        <button onClick={() => notify("Supplier invite link copied")} className="btn-primary text-[13px] whitespace-nowrap"><Plus size={15} /> Add Supplier</button>
+        <button onClick={onAdd} className="btn-primary text-[13px] whitespace-nowrap"><Plus size={15} /> Add Supplier</button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {list.map((s) => (
@@ -1173,6 +1173,39 @@ function ProductFormModal({ open, onClose, initial, onSave, notify }) {
   );
 }
 
+/* ================= SUPPLIER MODAL ================= */
+function SupplierFormModal({ open, onClose, onSave, notify }) {
+  const blank = { name: "", contact: "", email: "", phone: "", status: "Active" };
+  const [f, setF] = useState(blank);
+  useEffect(() => { if (open) setF(blank); }, [open]);
+  if (!open) return null;
+  const set = (k, v) => setF({ ...f, [k]: v });
+  const save = () => {
+    if (!f.name.trim()) { notify("Supplier name is required"); return; }
+    onSave(f); onClose();
+  };
+  return (
+    <Modal open={open} onClose={onClose}>
+      <div className="flex items-center justify-between">
+        <h3 className="font-display font-extrabold text-lg">Add New Supplier</h3>
+        <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400"><X size={18} /></button>
+      </div>
+      <div className="mt-4 grid sm:grid-cols-2 gap-3">
+        <div className="sm:col-span-2"><label className="text-xs font-semibold text-slate-500">Supplier name *</label><input value={f.name} onChange={(e) => set("name", e.target.value)} placeholder="e.g. FreshFoods Ltd." className="input mt-1" /></div>
+        <div><label className="text-xs font-semibold text-slate-500">Contact person</label><input value={f.contact} onChange={(e) => set("contact", e.target.value)} placeholder="e.g. Jane Doe" className="input mt-1" /></div>
+        <div><label className="text-xs font-semibold text-slate-500">Phone</label><input value={f.phone} onChange={(e) => set("phone", e.target.value)} placeholder="+1 415 555 0100" className="input mt-1" /></div>
+        <div className="sm:col-span-2"><label className="text-xs font-semibold text-slate-500">Email</label><input type="email" value={f.email} onChange={(e) => set("email", e.target.value)} placeholder="orders@supplier.com" className="input mt-1" /></div>
+        <div><label className="text-xs font-semibold text-slate-500">Status</label>
+          <select value={f.status} onChange={(e) => set("status", e.target.value)} className="input mt-1">{["Active", "Pending", "Inactive"].map((s) => <option key={s}>{s}</option>)}</select></div>
+      </div>
+      <div className="mt-5 flex gap-2">
+        <button onClick={onClose} className="btn-ghost flex-1">Cancel</button>
+        <button onClick={save} className="btn-primary flex-1"><Check size={15} /> Add supplier</button>
+      </div>
+    </Modal>
+  );
+}
+
 /* ================= APP ================= */
 export default function App() {
   const [screen, setScreen] = useState("login"); // login | otp | app
@@ -1194,6 +1227,7 @@ export default function App() {
     setMobileOpen(false);
   };
   const [showAdd, setShowAdd] = useState(false);
+  const [showSupplierAdd, setShowSupplierAdd] = useState(false);
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
   const [restocking, setRestocking] = useState(null);
@@ -1225,6 +1259,7 @@ export default function App() {
   }, []);
   const syncProduct = (p) => { api.saveProduct(p).catch(() => {}); };
   const syncDeleteProduct = (id) => { api.deleteProduct(id).catch(() => {}); };
+  const syncSupplier = (s) => { api.saveSupplier(s).catch(() => {}); };
   const syncDeleteSupplier = (id) => { api.deleteSupplier(id).catch(() => {}); };
 
   if (screen === "login") return (<><LoginScreen onLogin={(r, e) => { setRole(r); setEmail(e); setScreen("otp"); }} notify={notify} /><Toast toast={toast} /></>);
@@ -1243,7 +1278,7 @@ export default function App() {
               onRestock={(p) => { setRestocking(p); setRestockQty(50); }} selected={selected} setSelected={setSelected} syncDeleteProduct={syncDeleteProduct} />
           )}
           {active === "pos" && <PosView products={products} setProducts={setProducts} notify={notify} syncProduct={syncProduct} />}
-          {active === "suppliers" && <SuppliersView suppliers={suppliers} setSuppliers={setSuppliers} notify={notify} syncDeleteSupplier={syncDeleteSupplier} />}
+          {active === "suppliers" && <SuppliersView suppliers={suppliers} setSuppliers={setSuppliers} notify={notify} onAdd={() => setShowSupplierAdd(true)} syncDeleteSupplier={syncDeleteSupplier} />}
           {active === "reports" && <ReportsView notify={notify} />}
           {active === "settings" && <SettingsView role={role} setRole={setRole} dark={dark} toggleDark={() => setDark(!dark)} notify={notify} email={email} section={settingsSection} />}
           <p className="text-center text-[11px] text-slate-400 dark:text-slate-600 mt-8 pb-2">StockPilot v3.2 · Crafted for modern retail · Inter + Plus Jakarta Sans · Tailwind + Lucide</p>
@@ -1255,6 +1290,8 @@ export default function App() {
         onSave={(f) => { syncProduct({ ...f, id: Date.now() }); setProducts([{ ...f, id: Date.now(), gradient: "from-primary-500 to-indigo-700", icon: "Package" }, ...products]); notify(`${f.name} added to inventory`); }} />
       <ProductFormModal open={!!editing} onClose={() => setEditing(null)} initial={editing} notify={notify}
         onSave={(f) => { syncProduct(f); setProducts(products.map((p) => p.id === f.id ? { ...p, ...f } : p)); setEditing(null); notify(`${f.name} updated`); }} />
+      <SupplierFormModal open={showSupplierAdd} onClose={() => setShowSupplierAdd(false)} notify={notify}
+        onSave={(f) => { const row = { ...f, id: Date.now(), products: 0, rating: 5.0, lastOrder: "—", gradient: "from-primary-500 to-indigo-700" }; syncSupplier(row); setSuppliers([row, ...suppliers]); notify(`${f.name} added to suppliers`); }} />
 
       {/* delete confirm */}
       <Modal open={!!deleting} onClose={() => setDeleting(null)} width="max-w-sm">

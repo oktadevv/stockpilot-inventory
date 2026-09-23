@@ -26,7 +26,7 @@ OTP step is simulated — any 6-digit code works.
 - 📊 Dashboard (stock / low-stock / sales / revenue cards + sales trend chart + category donut)
 - 📦 Inventory table (search, category + status filters, bulk actions, add/edit/delete/restock modals, barcode-scan placeholder)
 - 🛒 POS & stock control (barcode simulator, cart, tax, payment methods, quick stock adjustments)
-- 🚚 Supplier management · 📈 Sales reports · ⚙️ Admin settings
+- 🚚 Supplier management (add/delete) · 📈 Sales reports · ⚙️ Admin settings
 - 🌙 Full dark / light mode · 📱 Fully responsive
 
 ## Run locally

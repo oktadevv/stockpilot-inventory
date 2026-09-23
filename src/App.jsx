@@ -22,6 +22,14 @@ const cx = (...c) => c.filter(Boolean).join(" ");
 const money = (n) => "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const PIE_COLORS = ["#4F46E5", "#10B981", "#F59E0B", "#0EA5E9", "#94A3B8"];
 
+function greeting() {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 12) return { text: "Good morning", emoji: "👋" };
+  if (h >= 12 && h < 15) return { text: "Good afternoon", emoji: "☀️" };
+  if (h >= 15 && h < 19) return { text: "Good evening", emoji: "🌤️" };
+  return { text: "Good night", emoji: "🌙" };
+}
+
 function stockStatus(stock, threshold) {
   if (stock === 0) return { label: "Out of Stock", cls: "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300 ring-1 ring-rose-200 dark:ring-rose-500/30", dot: "bg-rose-500" };
   if (stock <= threshold) return { label: "Low Stock", cls: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300 ring-1 ring-amber-200 dark:ring-amber-500/30", dot: "bg-amber-500" };
@@ -254,7 +262,7 @@ const NAV = [
   { id: "settings", label: "Admin Settings", icon: Settings },
 ];
 
-function Sidebar({ active, setActive, collapsed, setCollapsed, mobileOpen, setMobileOpen, dark, toggleDark, role }) {
+function Sidebar({ active, setActive, collapsed, setCollapsed, mobileOpen, setMobileOpen, dark, toggleDark, role, notify }) {
   const body = (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-3 px-5 h-[72px] shrink-0">
@@ -289,7 +297,7 @@ function Sidebar({ active, setActive, collapsed, setCollapsed, mobileOpen, setMo
           <div className="rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white p-4 mb-2">
             <p className="text-[13px] font-bold flex items-center gap-1.5"><Sparkles size={14} /> Go Pro</p>
             <p className="text-xs text-white/75 mt-1">Unlock barcode AI & auto-reorder.</p>
-            <button className="mt-3 w-full rounded-xl bg-white/95 text-emerald-700 text-xs font-bold py-2 hover:bg-white">Upgrade plan</button>
+            <button onClick={() => notify && notify("Pro plan coming soon — barcode AI & auto-reorder")} className="mt-3 w-full rounded-xl bg-white/95 text-emerald-700 text-xs font-bold py-2 hover:bg-white">Upgrade plan</button>
           </div>
         )}
         <div className={cx("flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm", collapsed && "justify-center")}>
@@ -417,13 +425,14 @@ function DashboardView({ products, notify, dbLive }) {
   const revenue = 12380;
   const topProducts = [...products].sort((a, b) => (b.price * (120 - b.stock)) - (a.price * (120 - a.stock))).slice(0, 4);
   const lowList = products.filter((p) => p.stock <= p.threshold).slice(0, 5);
+  const g = greeting();
 
   return (
     <div className="space-y-5">
       <div className="card p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4 overflow-hidden relative">
         <div className="absolute inset-0 bg-gradient-to-r from-primary-600/[0.07] via-transparent to-emerald-500/[0.07] pointer-events-none" />
         <div className="relative">
-          <h2 className="font-display text-xl sm:text-2xl font-extrabold tracking-tight">Good morning, Admin 👋</h2>
+          <h2 className="font-display text-xl sm:text-2xl font-extrabold tracking-tight">{g.text}, Admin {g.emoji}</h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Here's what's happening at <span className="font-semibold text-slate-700 dark:text-slate-200">Downtown Minimarket</span> today.</p>
           <p className="mt-2.5">{dbLive
             ? <span className="badge bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300 ring-1 ring-emerald-200 dark:ring-emerald-500/30"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> Neon Live</span>
@@ -1135,7 +1144,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0F172A] text-slate-900 dark:text-slate-100 font-sans flex">
-      <Sidebar active={active} setActive={setActive} collapsed={collapsed} setCollapsed={setCollapsed} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} dark={dark} toggleDark={() => setDark(!dark)} role={role} />
+      <Sidebar active={active} setActive={setActive} collapsed={collapsed} setCollapsed={setCollapsed} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} dark={dark} toggleDark={() => setDark(!dark)} role={role} notify={notify} />
       <div className="flex-1 min-w-0 flex flex-col min-h-screen">
         <Topbar onMenu={() => setMobileOpen(true)} dark={dark} toggleDark={() => setDark(!dark)} role={role} email={email} onLogout={() => { setScreen("login"); setSelected([]); }} query={query} setQuery={setQuery} active={active} onNavigate={navigate} />
         <main className="flex-1 p-4 sm:p-6 max-w-[1400px] w-full mx-auto">
